@@ -8,7 +8,8 @@
 //--- размещением первичных популляций, возможно с полями переменных правил..
 //-----------------------------------------------------------------------------
 //--- Author: Kornilov LN (Starmark)
-//--- e-mail: KornilovStar@gmail.com
+//--- Github: https://github.com/KornilovLN/Life.git,
+//--- e-mail: ln.KornilovStar@gmail.com
 //--- e-mail: ln.starmark@ekatra.io
 //--- e-mail: ln.starmark@gmail.com
 //--- date:   13.08.2023 22:09:00
@@ -23,6 +24,16 @@ use life::*;
 
 fn main() {
 	let args: Vec<String> = env::args().collect();
+
+	let about = About {
+		firstname: "Leonid".to_string(),
+		secondname: "Nikolaevich".to_string(),
+		mainname: "Kornilov".to_string(),	
+		author: "Kornilov LN (Starmark)".to_string(),
+		github: "https://github.com/KornilovLN/Life.git".to_string(),
+		e_mail: "ln.KornilovStar@gmail.com".to_string(),
+		datetime: "14.08.2023 13:10:00".to_string(),
+	};
 
 	//--- Структура (методы описаны в lib.rs)
 	let field = Field {
@@ -44,7 +55,14 @@ fn main() {
 		world = Field::populate_from_file(filename);
 	}
 
+	
+	about.Out();
+	about.Target();
+	about.Waiter(10);
+
 	//--- поле жизни
     field.run(world);	
+
+	
 }
 

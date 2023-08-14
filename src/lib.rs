@@ -15,7 +15,7 @@ pub const  RAWS_1: usize = RAWS-1;
 pub const  COLUMNS_1: usize = COLUMNS-1;
 
 const  WAITER_MSEC: u64 = 100; 
-const  MAXLOOP: u64 = 1500;
+const  MAXLOOP: u64 = 200;
 
 pub struct Field {
 	pub width: usize,	//--- длина поля
@@ -219,5 +219,49 @@ impl Field {
 		}
 		
 		newworld
+	}
+}
+
+
+
+//=== Секция About ============================================================
+
+pub struct About {
+	pub firstname: String,		//--- имя
+	pub secondname: String,		//--- отчество
+	pub mainname: String,		//--- фамилия
+	pub author: String,		//--- полный идентификатор автора
+	pub github: String,		//--- Github 
+	pub e_mail: String,		//--- почтовый ящик
+	pub datetime: String,	//--- 14.08.2023 13:10:00
+}
+
+impl About {
+	pub fn Waiter(&self, pause: u64) {
+		thread::sleep(time::Duration::from_secs(pause));
+	}
+}
+
+impl About {
+	pub fn Out(&self) {
+		println!("\t----------------------------------------------------------------------------");
+		println!("\tAuthor:      {}", self.author);
+				println!("\t\tFirst name:  {}", self.firstname);
+				println!("\t\tSecond name: {}", self.secondname);
+				println!("\t\tMain name:   {}", self.mainname);
+		println!("\tGithub:      {}", self.github);
+		println!("\te-mail:      {}", self.e_mail);
+		println!("\tDate Time:   {}", self.datetime);
+		println!("\t----------------------------------------------------------------------------");
+	}
+}
+
+impl About {
+	pub fn Target(&self) {
+		println!("\t----------------------------------------------------------------------------");
+		println!("\n\tЖизнь.");
+		println!("\n\tПрограмма имитации размножения элементарной популляции по правилам Конвея.");
+		println!("\tПланируется развитие программы в сторону усложнения правил и других параметров.\n");
+		println!("\t----------------------------------------------------------------------------");
 	}
 }
