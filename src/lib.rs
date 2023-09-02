@@ -10,16 +10,16 @@ use std::fs::File;
 use std::io::{BufRead, BufReader};
 
 pub const  RAWS: usize = 64;
-pub const  COLUMNS: usize = 238;
+pub const  COLUMNS: usize = 128;
 pub const  RAWS_1: usize = RAWS-1;
 pub const  COLUMNS_1: usize = COLUMNS-1;
 
-const  WAITER_MSEC: u64 = 100; 
-const  MAXLOOP: u64 = 200;
+const  WAITER_MSEC: u64 = 250;//00; 
+const  MAXLOOP: u64 = 20000;
 
 pub struct Field {
 	pub width: usize,	//--- длина поля
-	pub height: usize,	//--- ширина
+	pub height: usize,	//--- высота
 	pub tor: bool,		//--- тороидальное замыкание поля (true)
 	pub algo: u8,		//--- номер алгоритма правил жизни 
 					//--- [0 - Конвей, 
@@ -29,12 +29,19 @@ pub struct Field {
 }
 
 impl Field {
+	pub fn get_tor(&self) -> bool {
+		return self.tor;
+	}
+}
+
+impl Field {
 	//--- алгоритм жизни по Конвею
+	//--- обход не по краю, а только внутри периметра
 	pub fn generation(&self, _world: [[u8; COLUMNS]; RAWS]) -> [[u8; COLUMNS]; RAWS]
 	{
 		//--- сгенерим поле на основе предыдущего состояния
-		let mut newworld = [[0u8; COLUMNS]; RAWS];
-		
+		let mut newworld = [[0u8; COLUMNS]; RAWS];		
+	
 		//--- идя по строкам
 		for i in 0..self.height-1 {
 
@@ -45,6 +52,7 @@ impl Field {
 				let mut count = 0;
 
 				//--- обойти вокруг текущей клетки и посчитать соседей, если они есть
+				
 				if i>0 {
 					count = count + _world[i-1][j];
 				}
@@ -69,28 +77,11 @@ impl Field {
 				if j<self.width-1 {
 					count = count + _world[i][j+1];
 				}
-				
-				if self.tor == true {
-				
-				//--- если поле тороидальное, то надо учесть подвороты (var 2)
-				//if i == 0 && j == 0 {}
-				//if i == 0 && j == COLUMNS_1 {}
-				//if i == 0 && (j > 0 && j < COLUMNS_1) {}
-
-				//if (i > 0 && i < RAWS_1) && j == 0 {}
-				//if (i > 0 && i < RAWS_1) && j == COLUMNS_1 {}
-				//if (i > 0 && i < RAWS_1) && (j > 0 && j < COLUMNS_1) {}
-
-				//if (i == RAWS_1) && j == 0 {}
-				//if (i == RAWS_1) && j == COLUMNS_1 {}
-				//if (i == RAWS_1) && (j > 0 && j < COLUMNS_1) {}
-				
-				}
-
+			
 				//--- обнулить исследуемую клетку
 				newworld[i][j] = 0;
-
-				//--- правило Конвея
+				
+				//--- правило 0 Конвея
 				if (count <2) && (_world[i][j] == 1) {
 					newworld[i][j] = 0;
 				}
@@ -99,14 +90,108 @@ impl Field {
 				}
 				if (_world[i][j] == 0) && (count == 3) {
 					newworld[i][j] = 1;
-				}
+				}			
+				
 			}
-
 		}
+		
 
 		newworld
 	}
 }
+
+
+impl Field {
+	//--- обход по тору
+	pub fn generation_tor(&self, _w: [[u8; COLUMNS]; RAWS]) -> [[u8; COLUMNS]; RAWS]
+	{
+		//--- сгенерим поле на основе предыдущего состояния
+		let mut newworld = [[0u8; COLUMNS]; RAWS];
+		
+		for i in 1..self.height-1 {
+				
+			for j in 1..self.width-1 {
+				
+				//--- счетчик соседей
+				let mut count = _w[i][(j-1)%(self.width-2)] +
+								_w[i][(j+1)%(self.width-2)] +
+								_w[(i-1)%(self.height-2)][j] + 
+								_w[(i+1)%(self.height-2)][j] +
+								_w[(i-1)%(self.height-2)][(j-1)%(self.width-2)] + 
+								_w[(i-1)%(self.height-2)][(j+1)%(self.width-2)] +
+								_w[(i+1)%(self.height-2)][(j-1)%(self.width-2)] + 
+								_w[(i+1)%(self.height-2)][(j+1)%(self.width-2)];	
+					
+//      total = (grid[i, (j-1)%N] + grid[i, (j+1)%N] +
+//               grid[(i-1)%N, j] + grid[(i+1)%N, j] +
+//               grid[(i-1)%N, (j-1)%N] + grid[(i-1)%N, (j+1)%N] +
+//               grid[(i+1)%N, (j-1)%N] + grid[(i+1)%N, (j+1)%N])/255
+			
+				//--- обнулить исследуемую клетку
+				newworld[i][j] = 0;
+				
+				//--- правило 0 Конвея
+				if (count < 2) && (_w[i][j] == 1) {
+					newworld[i][j] = 0;
+				}
+				if _w[i][j] == 1 && (count == 2 || count == 3) {
+					newworld[i][j] = 1;
+				}
+				if (_w[i][j] == 0) && (count == 3) {
+					newworld[i][j] = 1;
+				}	   
+			
+			}				
+		}	
+		
+		newworld
+		
+	}	
+}	
+
+impl Field {
+	//--- Первичный засев поля life перед циклом для вырианта generation_tor
+	pub fn posev_tor(&self, wrld: &mut[[u8; COLUMNS]; RAWS]) {
+		//--- края будут в 0
+		for i in 0..self.height {
+			for j in 0..self.width {
+				wrld[i][j] = 0;
+			}
+		}
+		
+		//--- засев поля внутри краев
+		for i in 1..self.height-1 {
+			for j in 1..self.width-1 {
+				if rand::random() {
+					wrld[i][j] = 1;
+				} else {
+					wrld[i][j] = 0;
+				}
+			}
+		}
+		
+	}
+}	
+
+impl Field {
+	//--- подсчет живых клеток
+	pub fn census_tor(&self, _world: [[u8; COLUMNS]; RAWS]) -> u64
+	{
+		let mut count = 0;
+
+		for i in 1..self.height-1 {
+			for j in 1..self.width-1 {
+				if _world[i][j] == 1
+				{
+					count += 1;
+				}
+			}
+		}
+
+		count
+	}
+}
+
 
 impl Field {
 	//--- Первичный засев поля life перед циклом
@@ -162,6 +247,25 @@ impl Field {
 }
 
 impl Field {
+	//--- Отрисовка поля 
+	pub fn displayworld_tor(&self, wrld: [[u8; COLUMNS]; RAWS]) {
+		println!("{}", clear::All);
+
+		for i in 1..self.height-1 {
+			for j in 1..self.width-1 {
+				if wrld[i][j] == 1 {
+					print!("{red}0", red = color::Fg(color::Red));
+				}else{
+					print!(" ");
+				}
+			}
+
+			println!("");
+		}
+	}
+}
+
+impl Field {
 	//--- вывод статистики
 	pub fn displaystat(generations: &mut u64, quantity: u64) {
 		println!("{blue}Population at generation {g} is {c}", 
@@ -176,14 +280,29 @@ impl Field {
 		let mut generations: u64  = 0;
 
 		for _gens in 0..MAXLOOP {
-			let temp = Field::generation(self, world);
-			world = temp;
+			
+			if self.tor { 
+				let temp = Field::generation_tor(self, world);
+				world = temp;
+			}else{
+				let temp = Field::generation(self, world);
+				world = temp;
+			}	
+			
 
 			generations += 1;
+			
+			if self.tor { 
+				Field::displayworld_tor(self, world);
+				let quantity: u64 = Field::census_tor(self, world);
+				Field::displaystat(&mut generations, quantity);
+			}else{	
+				Field::displayworld(self, world);
+				let quantity: u64 = Field::census(self, world);
+				Field::displaystat(&mut generations, quantity);				
+			}
 
-			Field::displayworld(self, world);
-			let quantity: u64 = Field::census(self, world);
-			Field::displaystat(&mut generations, quantity);
+			
 
 			thread::sleep(time::Duration::from_millis(WAITER_MSEC));
 		}
@@ -221,8 +340,6 @@ impl Field {
 		newworld
 	}
 }
-
-
 
 //=== Секция About ============================================================
 
@@ -264,4 +381,29 @@ impl About {
 		println!("\tПланируется развитие программы в сторону усложнения правил и других параметров.\n");
 		println!("\t----------------------------------------------------------------------------");
 	}
+}
+
+//=== Секция Tests ============================================================
+
+//--- test скорости разрабатываемой функции генерации
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+
+	#[test]
+	fn speed() {
+	
+	}
+/*	
+	fn case_sensitive() {
+		let query = "duct";
+		let contents = "Rust:\nsafe, fast, productive.\nPick three.\nDuct tape.";
+		
+		assert_eq!(
+			vec!["safe, fast, productive."],
+			search(query, contents)
+		);
+	}
+*/	
 }

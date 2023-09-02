@@ -39,7 +39,7 @@ fn main() {
 	let field = Field {
 		width : COLUMNS,
 		height : RAWS,
-		tor : false,
+		tor : true,
 		algo : 0,
 	};
 
@@ -47,8 +47,12 @@ fn main() {
 	let mut world = [[0u8; COLUMNS]; RAWS];
 
 	if args.len() < 2 {	
-		//--- заполнение поля случайными клетками
-		Field::posev(&field, &mut world);
+		//--- заполнение поля случайными клетками		
+		if Field::get_tor(&field) { 
+			Field::posev_tor(&field, &mut world);
+		}else{
+			Field::posev(&field, &mut world);
+		}
 	}else{				
 		//--- взять засев из файла
 		let filename = env::args().nth(1).unwrap();
@@ -57,8 +61,8 @@ fn main() {
 
 	
 	about.Out();
-	about.Target();
-	about.Waiter(10);
+	about.Target();	
+	about.Waiter(1);
 
 	//--- поле жизни
     field.run(world);	
